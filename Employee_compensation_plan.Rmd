@@ -1,0 +1,506 @@
+---
+title: "Employee Compensation Plan"
+author: "Sanika Karwa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Employee Compensation Plan Dataset
+
+For the final project for ISE 201, I have selected a dataset Employee Compensation for the year 2021 listed on San Jose Data(https://data.sanjoseca.gov/dataset/employee-compensation-plan). 
+
+```{r }
+# Importing the required libraries
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Reading the dataset 
+myData <- read.csv("employee-compensation-2021.csv")
+head(myData,3)
+```
+```{r }
+# Dimensions of the dataset
+dim(myData)
+```
+
+The dataset contains 8162 rows(observations) and 13 columns(variables). 
+
+```{r}
+# Discarding the "Name" column
+myData <- myData %>% select(-Name)
+```
+
+Here, we remove the "Name" column as we want to discard the columns with personal information. 
+
+```{r}
+# Renaming the columns
+myData <- myData %>% rename("job_title_as_of_12_31_21" = "Job.Title..as.of.12.31.21.",
+                           "total_cash_compensation" = "Total.Cash.Compensation",
+                           "base_pay" = "Base.Pay" ,
+                           "overtime" = "Overtime",
+                           "sick_and_vacation_payouts" = "Sick.and.Vacation.Payouts",
+                           "other_cash_compensation" = "Other.Cash.Compensation",
+                           "defined_contribution_plan_contributions" = "Defined.Contribution.Plan.Contributions...City.Paid",
+                           "medical_dental_vision" = "Medical.Dental.Vision" ,
+                           "long_term_disability_life_medicare" = "Long.Term.Disability..Life..Medicare",
+                           "retirement_contributions_normal_cost" = "Retirement.Contributions..Normal.Cost....City.Paid",
+                           "misc_employment_related_costs" = "Misc.Employment.Related.Costs" )
+
+```
+
+Renaming the columns of the dataset as they have spaces between them and they are identified as fullstops so to make them understandable, renaming them with underscores in the middle.
+
+# Introduction
+
+### What are you curious to know about from the data you have selected? A sentence or two explaining why are you interested in studying this?
+
+How the Department affects the total cash compensation that an employee will get? 
+Does the base pay and overtime have any relation with total cash compensation?
+Which department gets how much sick and vacation payouts? \
+
+The above questions are the ones that I am curious to know from the dataset. \
+This dataset is useful to understand the trends on how an employee gets the compensation for their particular department and job title. These are valid and necessary questions for the employee and his wellbeing. \
+
+# About the Data
+
+### Data source - citation or link to the source
+San Jose Data: https://data.sanjoseca.gov/dataset/employee-compensation-plan/resource/205afc93-b3d2-4199-8d44-14a435b84dd7?inner_span=True
+
+### Data collection: How and when was data collected? Is it observational study or from an experiment?
+This data was collected by the Government. This is for every individual and there are 8162 employees' data in it. \ 
+It is an observational study.
+
+### Units of observations: What is the unit of observation, in most cases it would mean what each row indicates?
+Each row in the dataset represents the compensation given to each employee. 
+
+### Variables: What are the variables that you are planning to study ? All or a subset of variables?
+The dataset consists of 13 variables but I will be mostly studying the following variables: \
+Department \
+Total.Cash.Compensation \
+Base.Pay \
+Overtime \
+Other.Cash.Compensation \
+Medical.Dental.Vision \
+Retirement.Contributions..Normal.Cost....City.Paid \
+Long.Term.Disability..Life..Medicare \
+Misc.Employment.Related.Costs \
+
+```{r }
+# Converting the needed columns into numeric
+myData$Department <- as.factor(gsub(",", "", myData$Department))
+myData$job_title_as_of_12_31_21 <- as.factor(gsub(",", "", myData$job_title_as_of_12_31_21))
+myData$total_cash_compensation <- as.numeric(gsub(",", "", myData$total_cash_compensation))
+myData$base_pay <- as.numeric(gsub(",", "", myData$base_pay))
+myData$overtime <- as.numeric(gsub(",", "", myData$overtime))
+myData$sick_and_vacation_payouts <- as.numeric(gsub(",", "", myData$sick_and_vacation_payouts))
+myData$other_cash_compensation <- as.numeric(gsub(",", "", myData$other_cash_compensation))
+myData$defined_contribution_plan_contributions <- as.numeric(gsub(",", "", myData$defined_contribution_plan_contributions))
+myData$medical_dental_vision <- as.numeric(gsub(",", "", myData$medical_dental_vision))
+myData$long_term_disability_life_medicare <- as.numeric(gsub(",", "", myData$long_term_disability_life_medicare))
+myData$retirement_contributions_normal_cost <- as.numeric(gsub(",", "", myData$retirement_contributions_normal_cost))
+myData$misc_employment_related_costs <- as.numeric(gsub(",", "", myData$misc_employment_related_costs))
+```
+
+The dataset originally had all the numeric columns also considered as character columns. As we cannot perform any operations on character columns we convert the required columns in numeric form. The two columns Department and Job title are converted in factor form as they are categorical data. The code for the same is given above where we convert 10 columns in numeric form and 2 columns in factor form.
+
+```{r}
+# Finding the different categories in "Department" column
+categories <- unique(myData$Department) 
+numberOfCategories <- length(categories)
+categories
+numberOfCategories
+```
+
+There are 22 unique categories in the Department column. 
+
+```{r }
+# Top 10 department categories in descending order
+top10 <- myData %>% count(Department) %>% top_n(10, n) %>% arrange(desc(n))
+top10
+```
+
+If we go column "Department" wise then there are 2044 Police Department samples which is the max followed by 1346 Parks/Rec & Neigh Serv samples. \
+The top 10 categories from Department wise is given here. 
+
+### Data cleanup : If you had to do any data clean up please include code and brief description of steps, e.g. handling missing observations, transforming variables, filtering on rows, removing outliers.
+
+Our dataset does not contain invalid values.
+
+```{r }
+# Checking for duplicated values
+sum(duplicated(myData))
+```
+
+There are 41 duplicated values in the dataset.
+
+```{r}
+# Cleaning the duplicated values in the dataset
+myData <- myData %>% distinct()
+sum(duplicated(myData))
+```
+
+We remove these duplicated values using the distinct() function. 
+
+```{r }
+# Checking for missing values
+sum(is.na(myData))
+```
+
+There are a lot of missing values in the dataset. To handle these cases we will impute the values/remove them depending on number of missing values,
+
+```{r }
+# Checking for missing values in each column
+colSums(is.na(myData))
+```
+
+The max number of missing data is in the "Sick.and.Vacation.Payouts" columns followed by "Defined.Contribution.Plan.Contributions...City.Paid" column. In our case, we will ignore these columns for further computations. These columns in comparison to the other columns are not of much importance and when looked at the dataset, it can be ignored.
+
+```{r }
+# What percent of data is missing from each variable
+p <- function(x) {sum(is.na(x))/length(x)*100}
+apply(myData, 2, p)
+```
+
+Here, we find out the percent of missing values over the complete dataset for each column. This is done to see which values we will impute and for which ones we can remove the rows. 
+
+```{r}
+# Replacing with 0 & 1 in a new column for sick and vacation payouts
+myData$sick_and_vacation_availed <- ifelse(is.na(myData$sick_and_vacation_payouts), 0, 1)
+head(myData,3)
+```
+
+Here, we make a new column called "sick_and_vacation_availed" in place of "sick_and_vacation_payouts" wherein, if the value is NA we replace it with 0 and if there is a value in the column we will replace it with 1. This is converting continuous variable to categorical variable. 
+
+```{r }
+# Handling missing values
+cleanData <- myData %>% select(Department, job_title_as_of_12_31_21, total_cash_compensation, base_pay, overtime, sick_and_vacation_availed, other_cash_compensation, medical_dental_vision, retirement_contributions_normal_cost, long_term_disability_life_medicare, misc_employment_related_costs )
+
+cleanData <- cleanData %>% drop_na(long_term_disability_life_medicare)
+cleanData <- cleanData %>% drop_na(misc_employment_related_costs)
+cleanData <- cleanData %>% drop_na(base_pay)
+
+cleanData[is.na(cleanData)] <- 0
+head(cleanData)
+```
+
+Here, we handle the missing values in the dataset and it is stored in a new dataframe called cleanData. \
+
+First, we select the columns that we need and are going to use. We discarded columns with most number of missing values. In our case, we discarded 2 columns namely, "sick_and_vacation_payouts" and "defined_contribution_plan_contributions". But, we keep the "sick_and_vacation_availed" column. \ 
+
+Second, we remove the rows whose column has less number of missing values. In our case, we did this for 3 columns namely, "long_term_disability_life_medicare", "misc_employment_related_costs" and "base_pay". The missing values in these columns are less than 1% of the total dataset. \
+
+Third, we replace the NA values with 0 in the remaining cases as this wont affect the visualizations. This is done for data less than 50% of the missing values. I initially tried replacing with the mean but it did not give me accurate results and hence, I replaced these values with 0 so it does not affect my visualizations. 
+
+
+```{r}
+# using subset function
+newdata <- subset(cleanData, cleanData$Department == "Police" | cleanData$Department == "Parks/Rec & Neigh Serv P R N S" | cleanData$Department == "Fire" | cleanData$Department == "Public Works" | cleanData$Department == "Library", select=Department:overtime)
+```
+
+In the above we just subset our data based on top 5 departments in order of their frequency for few columns. 
+
+#### Data cleanup is now done. We will work on this clean data further for Exploratory Data Analysis.
+
+# Exploratory Data Analysis
+
+The following are the relevant visualisations of the data and the summary statistics of the same.
+
+```{r}
+# Histogram plotting
+hist(cleanData$misc_employment_related_costs, xlab='Misc Employment Costs', main='Histogram of Misc costs')
+```
+
+In this histogram, we can see the frequency of Misc Employment Related Costs. We see that maximum number of people receive Miscellaneous Costs under $100 which is surprising and something we would not expect. After that, maximum number of people receive in the range of $200 - $400 and it is slightly right skewed. 
+
+```{r}
+# Histogram plotting
+hist(cleanData$sick_and_vacation_availed)
+```
+
+The above is a simple plot which shows that not a lot of people get paid for sick_and_vacation and hence frequency of 0's is more than 1's. 
+
+```{r}
+ggplot(cleanData,aes(Department,base_pay)) +
+  geom_bar(position = "dodge",
+           stat = "summary",
+           fun = "mean") +
+  coord_flip()
+```
+
+In the above plot we see that the base_pay of Attorney is highest followed by Independent Police Auditor. The least is of Parks/Rec & Neigh Serv PRNS.
+
+```{r}
+# Plotting a scatter plot for 5 departments
+ggplot(data = newdata, aes(x = total_cash_compensation,y = base_pay)) + 
+  geom_point(aes(color = Department)) + geom_smooth(method = "lm") +  xlab("Total Cash Compensation") + ylab("Base Pay") + labs(colour="Department") +
+  ggtitle("For 5 departments: Total Cash Compensation v/s Base Pay")
+
+```
+```{r}
+# Correlation value 
+cor(newdata$total_cash_compensation,newdata$base_pay)
+```
+
+In the above scatter plot, we see that the total cash compensation and base pay are positively correlated for the Police department. As one increases, the other one increases too. 
+By the correlation value, we see that the two are highly positivley correlated to each other. 
+
+```{r }
+# Subsetting a part of data
+publicworksData <- subset(cleanData, cleanData$Department == "Public Works", select=Department:misc_employment_related_costs)
+
+# Plotting a scatter plot for the Public Works department
+ggplot(data = publicworksData, aes(x = misc_employment_related_costs , y = overtime)) + 
+  geom_point(aes(color = Department))+ geom_smooth(method = "glm") + xlab("Misc Employment Costs") + ylab("Overtime")  + ggtitle("For Public Works Department: Misc Costs v/s Overtime")
+
+```
+
+```{r}
+# Correlation value
+cor(publicworksData$misc_employment_related_costs, publicworksData$overtime)
+```
+
+In the above scatter plot, we plot misc_employment_related_costs against the overtime values for the PublicWorks department. We see that for various miscellaneous costs the overtime values are 0.
+By the correlation value, we can say that the two are not highly correlated. They are neutral to each other. 
+
+```{r}
+# subsetting only the police department and getting those values
+policedept <- subset(myData, Department == "Police")
+
+# Grouping of the police department by Job title and total cash compensation
+police_df <- policedept %>% group_by(job_title_as_of_12_31_21) %>%
+  select(job_title_as_of_12_31_21, overtime) %>%
+  arrange(desc(overtime))
+head(police_df,3)
+```
+
+Here, we group the Police Department by their individual Job Title associated with their respective overtime values and arranged it in the descending order.
+
+```{r}
+# Sampling only the top 50 rows to visualize better
+samplepolice <- sample_n(policedept, 50)
+head(samplepolice, 3)
+```
+Here, we sampled the dataset with 50 values and stored it in samplepolice variable. 
+
+```{r}
+# Box plot of job title v/s overtime
+ggplot(samplepolice) +
+  geom_boxplot(mapping = aes(x = job_title_as_of_12_31_21, y = overtime)) +
+  coord_flip()
+```
+
+The boxplot for the same is given above with overtime in the x-axis and job title in the y-axis. We see that Police Sergeant has a wide variety of overtime amount that he gets. We also see that 8/12 job titles in the Police department get no amount in their overtime. 
+
+```{r}
+# subsetting only the fire department and getting those values
+firedept <- subset(myData, Department == "Fire")
+
+# Grouping of the fire department by Job title and total cash compensation
+fire_df <- firedept %>% group_by(job_title_as_of_12_31_21) %>%
+  select(job_title_as_of_12_31_21, total_cash_compensation) %>%
+  arrange(desc(total_cash_compensation))
+head(fire_df,3)
+```
+
+Here, we group the Fire Department by their individual Job Title associated with their respective base pay values and arranged it in the descending order.
+
+```{r}
+# Sampling only the top 50 rows to visualize better
+samplefire <- sample_n(firedept, 50)
+head(samplefire, 3)
+```
+
+Here, we sampled the dataset with 50 values and stored it in samplefire variable. 
+
+```{r}
+# Box plot of job title v/s base pay
+ggplot(samplefire) +
+  geom_boxplot(mapping = aes(x = job_title_as_of_12_31_21, y = total_cash_compensation)) +
+  coord_flip()
+```
+
+The boxplot for the same is given above where we visualize total cash compensation with the fire department's respective job titles. We see that the most variability in cash compensation is found in Fire Captain. The minimum amount is given to Firefighter Recruit. The maximum cash compensation is also given to Fire Captain.
+
+```{r}
+# Summary statistics of clean data
+summary(cleanData)
+```
+
+The above show the summary statistics of the cleanData after removing all the missing and duplicate values. We have to avoid the column sick_and_vacation_availed as it has only 0's and 1's but by the mean value we can say the value is biased towards 0 and hence it has a lot of 0's. 
+
+# Principal Component Analysis
+
+```{r}
+# Selecting the numeric required columns
+pca_data <- cleanData %>% select(total_cash_compensation, base_pay, overtime, sick_and_vacation_availed, other_cash_compensation, medical_dental_vision,retirement_contributions_normal_cost, long_term_disability_life_medicare, misc_employment_related_costs)
+head(pca_data,3)
+```
+
+In the above code snippet, we select the numeric columns needed and stored into a new variable. 
+
+```{r}
+# Correlation matrix
+cormat <- cor(pca_data)
+cormat <- round(cormat, digits = 3)
+cormat
+```
+
+Correlation measures both the strength and direction of the linear relationship between two variables. For the correlation matrix, the values are standardized. The diagonal elements are all 1. The values which are negative in the matrix are negatively correlated to each other. 
+
+```{r}
+# Eigen values and eigen vector of the correlation matrix
+eigenCovData <- eigen(cormat)
+covValue <- eigenCovData$values
+covVector <- eigenCovData$vectors
+covValue
+covVector
+```
+
+The values are rounded to make them readable upto 2 decimal digits. The eigen values here are printed in descending order with the first value being the maximum. Eigen value and eigen vector for correlation matrix is the direction in which the data will be selected. 
+
+```{r}
+# finding the percent of variance explained
+PVE <- covValue / sum(covValue)
+PVE
+```
+
+```{r}
+# Cumulative sum of percent of variance explained
+cumsum(PVE)
+```
+
+```{r}
+# plotting the scree plot of principal components
+plot(PVE, xlab = "Principal Component",
+     ylab = "Proportion of Variance Explained",
+     type = "b")
+```
+
+```{r}
+# Plotting the scree plot of cumulative sum of percent variance
+plot(cumsum(PVE), xlab = "Principal Component",
+     ylab = "Proportion of Variance Explained",
+     type = "b")
+```
+
+By plotting the scree plot, we can see that we can select first 4 components to reduce the feature dimensions. These 4 components capture around 90% of the variability in the data with a loss of approximately 10%.
+
+```{r}
+# computing principal component vector
+evecsCov <- covVector[,1:4]
+colnames(evecsCov) <- c("PC1", "PC2", "PC3","PC4")
+row.names(evecsCov) <- colnames(pca_data)
+evecsCov <- round(evecsCov,3)
+evecsCov
+```
+
+There are 4 principal components in the dataset. <br>
+In principal component 1, we see that total_cash_compensation dominates and the least is for sick_and_vacation_availed. In principal component 2, sick_and_vacation_availed dominates. Third component is dominated by medical_dental_vision. The fourth component is dominated by overtime.
+
+```{r}
+# computing scaled principal components
+PC1 <- as.matrix(pca_data) %*% evecsCov[,1]
+PC2 <- as.matrix(pca_data) %*% evecsCov[,2]
+PC3 <- as.matrix(pca_data) %*% evecsCov[,3]
+PC4 <- as.matrix(pca_data) %*% evecsCov[,4]
+PC  <- data.frame(PC1,PC2,PC3,PC4)
+PC["Department"] <- cleanData["Department"]
+head(PC,3)
+```
+
+In the above code snippet, the scaled principal components are calculated. 
+
+# Hypothesis Formulation
+
+### Hypothesis 1:
+
+I have distributed few departments into two groups namely Emergency and Non-emergency as given below based on if the departments are emergency basis and critical or if they are non- emergency and not very important departments. This is purely on my thinking. <br>
+Emergency – Fire and Police <br>
+Non-emergency - Library, Human Resources, Parks/Rec & Neigh Serv P R N S and Public Works  <br>
+
+```{r}
+emergency <- subset(myData, myData$Department == "Fire" | myData$Department == "Police")
+non_emergency <- subset(myData, myData$Department == "Library" | myData$Department == "Human Resources" | myData$Department == "Parks/Rec & Neigh Serv P R N S" | myData$Department == "Public Works")
+```
+
+Emergency and non-emergency groups are grouped as above.<br>
+
+I want to check if variances of salaries in emergency departments is greater than that of non-emergency departments as the salaries have a huge diversity in them. <br>
+
+$\sigma_e^2$: Variance of salaries in Emergency departments <br>
+$\sigma_n^2$: Variance of salaries in Non-emergency departments <br>
+
+H0: $\sigma_e^2$ = $\sigma_n^2$ <br>
+HA: $\sigma_e^2$ > $\sigma_n^2$ <br>
+
+##### Test Statistic:
+
+Variance of salaries between Emergency and Non-emergency departments
+
+##### Reference Distribution:
+
+We can use F-distribution to make an inference on the variances of two normal distribution because of the following reasons: <br>
+1.	The sample is independent because different individuals from different departments gave their salaries and other cash compensation <br>
+2.	The values are normally distributed and there is no clear outlier in the salaries of both groups	
+
+```{r}
+var.test(emergency$total_cash_compensation, non_emergency$total_cash_compensation, alternative = "two.sided")
+```
+
+**The p-value of F-test is very small, smaller than 0.05. Hence, we reject the null hypothesis. So, we can say that emergency group has higher variance in total cash compensation than the non-emergency group.**
+<br>
+
+### Hypothesis 2: 
+
+I have divided the departments into two groups namely Government and Non-Government based purely on my thinking.<br>
+Government - City Managers, City Councils, Environmental Services, Retirement Services, Office of Economic Development and Community Energy Department, Public Works <br>
+Non-government - Finance, Information Technology, Transportation, Housing, Airport and Planning/Building/Code. <br>
+
+```{r}
+govt <- subset(myData, myData$Department == "City Managers" | myData$Department == "City Councils" | myData$Department == "Environmental Services" | myData$Department == "Retirement Services" | myData$Department == "Office Of Economic Development" | myData$Department == "Community Energy Department" | myData$Department == "Public Works")
+non_govt <- subset(myData, myData$Department == "Finance" | myData$Department == "Information Technology" | myData$Department == "Transportation" | myData$Department == "Housing" | myData$Department == "Airport" | myData$Department == "Planning/Building/Code")
+```
+
+Government and non-government groups are grouped above.<br>
+
+I want to verify if the mean of bonuses/perks that an employee gets other than base_pay is greater for employers at government positions than for non-government/normal departments. <br>
+
+$\mu_g$: Mean of total cash compensation of employers at government positions <br>
+$\mu_n$: Mean of total cash compensation of employers at non-government positions <br>
+
+H0: $\mu_g$ - $\mu_n$ = 0  <br>
+HA: $\mu_g$ - $\mu_n$ > 0  <br>
+
+##### Test Statistic:
+
+Difference in the sample means of bonuses between employers of government and non-government positions
+
+##### Reference Distribution:
+
+When small samples are taken, we assume that the populations are normally distributed and base our hypotheses tests on the t-distribution. In this example, t-distribution can be used to make an inference because: <br>
+1.	The sample is independent because different individuals from different departments gave their salaries and other cash compensation <br>
+2.	The values are normally distributed and there is no clear outlier in the salaries of both groups<br>
+
+Since, I rejected the null hypothesis in Hypothesis 1, I cannot perform pooled t-test for hypothesis in Hypothesis 2. <br>
+
+```{r}
+t.test(govt$total_cash_compensation, non_govt$total_cash_compensation, alternative = "greater", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+**The p-value of T-test is 0.08 which is higher than 0.05. We fail to reject the NULL hypothesis. In conclusion, there is no significant difference in the means of total cash compensations at government and non-government positions.**
+
+# Conclusion
+
+It is surprising to see that in the emergency subgroup we see large variance in the total cash compensation than in the non-emergency subgroup. Also, the miscellaneous costs received is only upto $100 for maximum number of people. We also see that the total cash compensation and base pay are highly correlated to each other. Even though it is not mentioned in the dataset, but reimbursements should be a separate column and will be very fascinating to see as to which department gives more reimbursements than the other.
+
+# References
+
+- Exploratory Data Analysis: https://r4ds.had.co.nz/exploratory-data-analysis.html#questions
+- Employee Compensation Plan: https://clockify.me/blog/business/compensation-plan/
+- R documentation: https://rpubs.com/
